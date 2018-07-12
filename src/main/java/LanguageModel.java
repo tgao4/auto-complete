@@ -16,6 +16,8 @@ public class LanguageModel {
 		@Override
 		public void setup(Context context) {
 			// how to get the threashold parameter from the configuration?
+			Configuration conf = context.getConfiguration();
+			threashold = conf.getInt("threashold", 20);
 		}
 
 		
@@ -36,12 +38,25 @@ public class LanguageModel {
 			int count = Integer.valueOf(wordsPlusCount[1]);
 
 			//how to filter the n-gram lower than threashold
+			if (count < threashold) {
+				return;
+			}
 			
 			//this is --> cool = 20
 
 			//what is the outputkey?
 			//what is the outputvalue?
-			
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0 ; i < words.length - 1; i++) {
+				sb.append(words[i]);
+				sb.append(" ");
+			}
+			String outputKey = sb.toString().trim();
+			String outputValue = words[words.length - 1];
+			if (outputKey != null && outputKey.length() >= 1) {
+				context.write(new Text(outputKey), new Text(outputValue + "=" + count));
+			}
+
 			//write key-value to reducer?
 		}
 	}
@@ -60,6 +75,29 @@ public class LanguageModel {
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 			
 			//can you use priorityQueue to rank topN n-gram, then write out to hdfs?
+			TreeMap<Integer, ArrayList<String>> tm = new TreeMap<Integer, ArrayList<String>>(Collections.reverseOrder());
+			for (Text value : values) {
+				String[] words = value.toString().trim().split("=");
+				String word = words[0].trim();
+				int count = Integer.parseInt(words[1]);
+				if (tm.containsKey(count)) {
+					tm.get(count).add(word);
+				}
+				else {
+					tm.put(count, new ArrayList<String>());
+					tm.get(count).add(word);
+				}
+			}
+
+			Iterator<Integer> iter = tm.keySet().iterator();
+			for (int i = 0; i < n && iter.hasNext(); i++) {
+				int keyCount = iter.next();
+				ArrayList<String> words = tm.get(keyCount);
+				for (String curWord : words) {
+					context.write(new DBOutputWritable(key.toString(), curWord, keyCount), NullWritable.get());
+					i++;
+				}
+			}
 		}
 	}
 }

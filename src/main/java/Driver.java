@@ -19,7 +19,7 @@ public class Driver {
 		Configuration conf1 = new Configuration();
 
 		//how to customize separator?
-
+		conf1.set("textinputformat.record.delimiter", ".");
 		conf1.set("noGram", args[2]);
 		
 		Job job1 = Job.getInstance();
@@ -47,17 +47,17 @@ public class Driver {
 		conf2.set("threashold", args[3]);
 		conf2.set("n", args[4]);
 		
-		DBConfiguration.configureDB(conf2, 
+		DBConfiguration.configureDB(conf2,
 				"com.mysql.jdbc.Driver",
-				"jdbc:mysql://ip_address:port/test",
+				"jdbc:mysql://206.81.1.159:3306/test",
 				"root",
-				"password");
+				"root");
 		
 		Job job2 = Job.getInstance(conf2);
 		job2.setJobName("Model");
 		job2.setJarByClass(Driver.class);
 		
-		job2.addArchiveToClassPath(new Path("path_to_ur_connector"));
+		job2.addArchiveToClassPath(new Path("/mysql/mysql-connector-java-5.1.39-bin.jar"));
 		job2.setMapOutputKeyClass(Text.class);
 		job2.setMapOutputValueClass(Text.class);
 		job2.setOutputKeyClass(DBOutputWritable.class);
