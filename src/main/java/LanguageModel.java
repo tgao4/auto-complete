@@ -61,7 +61,16 @@ public class LanguageModel {
 		}
 	}
 
-	public static class Reduce extends Reducer<Text, Text, DBOutputWritable, NullWritable> {
+
+	public static class Reduce extends Reducer<Text, Text, Text, Text> {
+		class WordCount {
+			private String word;
+			private int count;
+			public WordCount(String word, int count) {
+				this.word = word;
+				this.count = count;
+			}
+		}
 
 		int n;
 		// get the n parameter from the configuration
@@ -73,31 +82,53 @@ public class LanguageModel {
 
 		@Override
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			
+			//this is --> cool, good, boy...
+			//key: this is value: cool = 50, good = 60
 			//can you use priorityQueue to rank topN n-gram, then write out to hdfs?
-			TreeMap<Integer, ArrayList<String>> tm = new TreeMap<Integer, ArrayList<String>>(Collections.reverseOrder());
+			Comparator<WordCount> comparator = new Comparator<WordCount>() {
+				public int compare(WordCount o1, WordCount o2) {
+					return o1.count - o2.count;
+				}
+			};
+			Queue<WordCount> queue = new PriorityQueue<WordCount>(n, comparator);
 			for (Text value : values) {
 				String[] words = value.toString().trim().split("=");
 				String word = words[0].trim();
 				int count = Integer.parseInt(words[1]);
-				if (tm.containsKey(count)) {
-					tm.get(count).add(word);
+				queue.offer(new WordCount(word, count));
+				if (queue.size() > n) {
+					queue.poll();
 				}
-				else {
-					tm.put(count, new ArrayList<String>());
-					tm.get(count).add(word);
-				}
+			}
+			while (!queue.isEmpty()) {
+				WordCount node = queue.poll();
+				context.write(new Text(key.toString()), new Text(node.word + "|" + node.count));
 			}
 
-			Iterator<Integer> iter = tm.keySet().iterator();
-			for (int i = 0; i < n && iter.hasNext(); i++) {
-				int keyCount = iter.next();
-				ArrayList<String> words = tm.get(keyCount);
-				for (String curWord : words) {
-					context.write(new DBOutputWritable(key.toString(), curWord, keyCount), NullWritable.get());
-					i++;
-				}
-			}
+//			TreeMap<Integer, ArrayList<String>> tm = new TreeMap<Integer, ArrayList<String>>(Collections.reverseOrder());
+//			for (Text value : values) {
+//				String[] words = value.toString().trim().split("=");
+//				String word = words[0].trim();
+//				int count = Integer.parseInt(words[1]);
+//				if (tm.containsKey(count)) {
+//					tm.get(count).add(word);
+//				}
+//				else {
+//					tm.put(count, new ArrayList<String>());
+//					tm.get(count).add(word);
+//				}
+//			}
+
+//			Iterator<Integer> iter = tm.keySet().iterator();
+//			for (int i = 0; i < n && iter.hasNext(); i++) {
+//				int keyCount = iter.next();
+//				ArrayList<String> words = tm.get(keyCount);
+//				for (String curWord : words) {
+//					context.write(new Text(key.toString()), new Text("word: " + curWord + "count: " + keyCount));
+////					context.write(new DBOutputWritable(key.toString(), curWord, keyCount), NullWritable.get());
+//					i++;
+//				}
+//			}
 		}
 	}
 }

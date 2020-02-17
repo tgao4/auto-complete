@@ -7,6 +7,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.db.DBConfiguration;
 import org.apache.hadoop.mapreduce.lib.db.DBOutputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.IOException;
@@ -21,7 +22,7 @@ public class Driver {
 		//how to customize separator?
 		conf1.set("textinputformat.record.delimiter", ".");
 		conf1.set("noGram", args[2]);
-		
+
 		Job job1 = Job.getInstance();
 		job1.setJobName("NGram");
 		job1.setJarByClass(Driver.class);
@@ -47,30 +48,32 @@ public class Driver {
 		conf2.set("threashold", args[3]);
 		conf2.set("n", args[4]);
 		
-		DBConfiguration.configureDB(conf2,
-				"com.mysql.jdbc.Driver",
-				"jdbc:mysql://206.81.1.159:3306/test",
-				"root",
-				"root");
+//		DBConfiguration.configureDB(conf2,
+//				"com.mysql.jdbc.Driver",
+//				"jdbc:mysql://206.81.1.159:3306/test",
+//				"root",
+//				"root");
 		
 		Job job2 = Job.getInstance(conf2);
 		job2.setJobName("Model");
 		job2.setJarByClass(Driver.class);
 		
-		job2.addArchiveToClassPath(new Path("/mysql/mysql-connector-java-5.1.39-bin.jar"));
-		job2.setMapOutputKeyClass(Text.class);
-		job2.setMapOutputValueClass(Text.class);
-		job2.setOutputKeyClass(DBOutputWritable.class);
-		job2.setOutputValueClass(NullWritable.class);
+//		job2.addArchiveToClassPath(new Path("/mysql/mysql-connector-java-5.1.39-bin.jar"));
+//		job2.setMapOutputKeyClass(Text.class);
+//		job2.setMapOutputValueClass(Text.class);
+		job2.setOutputKeyClass(Text.class);
+		job2.setOutputValueClass(Text.class);
 		
 		job2.setMapperClass(LanguageModel.Map.class);
 		job2.setReducerClass(LanguageModel.Reduce.class);
 		
 		job2.setInputFormatClass(TextInputFormat.class);
-		job2.setOutputFormatClass(DBOutputFormat.class);
+//		job2.setOutputFormatClass(DBOutputFormat.class);
+		job2.setOutputFormatClass(TextOutputFormat.class);
 		
-		DBOutputFormat.setOutput(job2, "output", 
-				new String[] {"starting_phrase", "following_word", "count"});
+//		DBOutputFormat.setOutput(job2, "output",
+//				new String[] {"starting_phrase", "following_word", "count"});
+		FileOutputFormat.setOutputPath(job2, new Path(args[5]));
 
 		TextInputFormat.setInputPaths(job2, args[1]);
 		job2.waitForCompletion(true);
